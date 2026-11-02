@@ -1,0 +1,48 @@
+@import '@fontsource-variable/bricolage-grotesque';
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --color-ink: #0d1118;
+  --color-panel: #141a24;
+  --color-raised: #1b2331;
+  --color-line: #252e3f;
+  --color-text: #e8ecf3;
+  --color-muted: #8b95aa;
+  --color-tally: #f5b544;
+  --color-tally-dim: #5a4520;
+  --color-danger: #ff7a7a;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-tally);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@keyframes tally-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(245 181 68 / 0.55); }
+  50% { box-shadow: 0 0 0 6px rgb(245 181 68 / 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
