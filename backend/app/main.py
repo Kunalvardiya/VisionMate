@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api import health
+from app.api import frames, health
 from app.config import Settings, get_settings
 from app.core.security import GuardMiddleware
 
@@ -14,4 +14,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allowed_hosts=settings.allowed_hosts,
     )
     app.include_router(health.router)
+    app.include_router(frames.router)
     return app
