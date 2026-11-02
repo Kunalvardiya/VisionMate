@@ -3,8 +3,9 @@ import time
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
-from app.config import get_settings
+from app.config import Settings
 from app.services.frames.decoder import FrameError, decode_jpeg
 
 router = APIRouter(prefix="/api/frames")
@@ -23,9 +24,14 @@ class FrameSampling(BaseModel):
     max_fps: int
 
 
+def _settings(request: Request) -> Settings:
+    settings: Settings = request.app.state.settings
+    return settings
+
+
 @router.get("/sampling")
-def sampling() -> FrameSampling:
-    s = get_settings()
+def sampling(request: Request) -> FrameSampling:
+    s = _settings(request)
     return FrameSampling(
         max_width=s.frame_max_width, jpeg_quality=s.frame_jpeg_quality, max_fps=s.frame_max_fps
     )
@@ -33,7 +39,7 @@ def sampling() -> FrameSampling:
 
 @router.post("/inspect", response_model=FrameInfo)
 async def inspect(request: Request) -> FrameInfo | JSONResponse:
-    settings = get_settings()
+    settings = _settings(request)
     content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
     if content_type != "image/jpeg":
         return JSONResponse({"detail": "Content-Type must be image/jpeg"}, status_code=415)
@@ -49,7 +55,7 @@ async def inspect(request: Request) -> FrameInfo | JSONResponse:
 
     started = time.perf_counter()
     try:
-        frame = decode_jpeg(data, settings.max_frame_side)
+        frame = await run_in_threadpool(decode_jpeg, data, settings.max_frame_side)
     except FrameError as error:
         return JSONResponse({"detail": error.message}, status_code=error.status)
     decode_ms = (time.perf_counter() - started) * 1000

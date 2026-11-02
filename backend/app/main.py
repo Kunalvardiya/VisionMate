@@ -8,6 +8,7 @@ from app.core.security import GuardMiddleware
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(title="VisionMate", docs_url=None, redoc_url=None)
+    app.state.settings = settings
     app.add_middleware(
         GuardMiddleware,
         allowed_origins=settings.allowed_origins,

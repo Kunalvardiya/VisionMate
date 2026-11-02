@@ -26,17 +26,25 @@ class DecodedFrame:
     height: int
 
 
+# Segments with a 2-byte length that may legitimately precede the SOF: DQT, DHT, DRI, COM, DAC, APPn.
+SEGMENTS_BEFORE_SOF = frozenset({0xDB, 0xC4, 0xDD, 0xFE, 0xCC, *range(0xE0, 0xF0)})
+
+
 def jpeg_dimensions(data: bytes) -> tuple[int, int]:
-    """Read (width, height) from the JPEG SOF header without decoding pixels."""
+    """Read (width, height) from the JPEG SOF header without decoding pixels.
+
+    The walk is deliberately strict: libjpeg tolerates stray bytes and length-less markers
+    (TEM, RSTn, FF00) that a length-skipping parser would misread, which would let a crafted
+    file hide its real dimensions. Anything we cannot account for byte by byte is rejected.
+    """
     if not data.startswith(SOI):
         raise FrameError(400, "Not a JPEG image")
     pos = 2
-    while pos + 4 <= len(data):
+    while pos + 2 <= len(data):
         if data[pos] != 0xFF:
-            pos += 1
-            continue
+            raise FrameError(400, "JPEG header is missing or corrupt")
         marker = data[pos + 1]
-        if marker == 0xFF:  # fill byte
+        if marker == 0xFF:  # fill byte before a marker
             pos += 1
             continue
         if marker in SOF_MARKERS:
@@ -45,9 +53,12 @@ def jpeg_dimensions(data: bytes) -> tuple[int, int]:
             height = int.from_bytes(data[pos + 5 : pos + 7], "big")
             width = int.from_bytes(data[pos + 7 : pos + 9], "big")
             return width, height
-        if marker == 0xDA:  # start of scan: no SOF before pixel data
-            break
-        pos += 2 + int.from_bytes(data[pos + 2 : pos + 4], "big")
+        if marker not in SEGMENTS_BEFORE_SOF or pos + 4 > len(data):
+            raise FrameError(400, "Unsupported JPEG structure")
+        length = int.from_bytes(data[pos + 2 : pos + 4], "big")
+        if length < 2:
+            raise FrameError(400, "JPEG header is missing or corrupt")
+        pos += 2 + length
     raise FrameError(400, "JPEG header is missing or corrupt")
 
 

@@ -126,6 +126,47 @@ describe('useCamera', () => {
     expect(result.current.status).toBe('on')
   })
 
+  it('switching device while a request is pending stops the stale stream', async () => {
+    const stale = fakeTrack('cam1')
+    const fresh = fakeTrack('cam2')
+    let resolveFirst!: (s: MediaStream) => void
+    getUserMedia
+      .mockReturnValueOnce(new Promise<MediaStream>((r) => (resolveFirst = r)))
+      .mockResolvedValueOnce(fakeStream([fresh]))
+    const { result } = renderHook(() => useCamera())
+    let first!: Promise<void>
+    act(() => {
+      first = result.current.start()
+    })
+    await act(async () => result.current.setDeviceId('cam2'))
+    await waitFor(() => expect(result.current.status).toBe('on'))
+    await act(async () => {
+      resolveFirst(fakeStream([stale]))
+      await first
+    })
+    expect(stale.stop).toHaveBeenCalled()
+    expect(fresh.stop).not.toHaveBeenCalled()
+    expect(result.current.deviceId).toBe('cam2')
+    expect(result.current.status).toBe('on')
+  })
+
+  it('unmount while a request is pending stops the stream when it resolves', async () => {
+    const track = fakeTrack()
+    let resolve!: (s: MediaStream) => void
+    getUserMedia.mockReturnValueOnce(new Promise<MediaStream>((r) => (resolve = r)))
+    const { result, unmount } = renderHook(() => useCamera())
+    let started!: Promise<void>
+    act(() => {
+      started = result.current.start()
+    })
+    unmount()
+    await act(async () => {
+      resolve(fakeStream([track]))
+      await started
+    })
+    expect(track.stop).toHaveBeenCalled()
+  })
+
   it('track ended becomes an unplugged error and stops tracks', async () => {
     const track = fakeTrack()
     getUserMedia.mockResolvedValueOnce(fakeStream([track]))
