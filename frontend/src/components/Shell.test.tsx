@@ -4,10 +4,15 @@ import { describe, expect, it } from 'vitest'
 
 import { NAV_ITEMS } from '../lib/nav'
 import { routes } from '../routes'
+import { CameraProvider } from '../state/CameraContext'
 
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
-  return render(<RouterProvider router={router} />)
+  return render(
+    <CameraProvider>
+      <RouterProvider router={router} />
+    </CameraProvider>,
+  )
 }
 
 describe('Shell navigation', () => {
