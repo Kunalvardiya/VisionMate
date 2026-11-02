@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 
 import { CameraPreview } from '../components/CameraPreview'
+import { FrameLink } from '../components/FrameLink'
 import { StatusBadge } from '../components/StatusBadge'
 import { useCameraContext } from '../state/CameraContext'
 
@@ -63,6 +64,8 @@ export function CameraPage() {
           </label>
         )}
       </div>
+
+      <FrameLink videoRef={videoRef} enabled={running} />
 
       <p className="text-muted text-sm">
         Microphone: not enabled yet. Voice features arrive in Phase 5.
